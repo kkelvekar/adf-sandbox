@@ -5,7 +5,7 @@ select * from dbo.Products
 --ALTER COLUMN PRODUCT_NAME NVARCHAR(200) NOT NULL;
 GO
 
-CREATE PROCEDURE dbo.usp_MergeProducts
+ALTER PROCEDURE dbo.usp_MergeProducts
 AS
 BEGIN
   SET NOCOUNT ON;
@@ -13,26 +13,28 @@ BEGIN
 
   BEGIN TRAN;
 
-    -- 1) Merge staging into production
-    MERGE INTO dbo.Products AS Target
-    USING dbo.Products_Staging AS Src
-      ON Target.PRODUCT_ID = Src.PRODUCT_ID
-    WHEN MATCHED THEN
-      UPDATE SET
-        Target.PRODUCT_NAME = Src.PRODUCT_NAME,
-        Target.UNIT_PRICE   = Src.UNIT_PRICE
-    WHEN NOT MATCHED BY TARGET THEN
-      INSERT (PRODUCT_ID, PRODUCT_NAME, UNIT_PRICE)
-      VALUES (Src.PRODUCT_ID, Src.PRODUCT_NAME, Src.UNIT_PRICE);
+    -- 1) Delete any existing target rows for the IDs in staging
+    DELETE P
+    FROM dbo.Products AS P
+    INNER JOIN dbo.Products_Staging AS S
+      ON P.PRODUCT_ID = S.PRODUCT_ID;
 
-    -- 2) (Optional) Validate row counts or checksums
+    -- 2) Insert all rows from staging into production
+    INSERT INTO dbo.Products (PRODUCT_ID, PRODUCT_NAME, UNIT_PRICE)
+    SELECT 
+      S.PRODUCT_ID,
+      S.PRODUCT_NAME,
+      S.UNIT_PRICE
+    FROM dbo.Products_Staging AS S;
+
+    -- 3) (Optional) Validate counts or checksums
     -- DECLARE @cntSrc INT = (SELECT COUNT(*) FROM dbo.Products_Staging);
     -- DECLARE @cntTgt INT = (SELECT COUNT(*) FROM dbo.Products WHERE PRODUCT_ID IN (SELECT PRODUCT_ID FROM dbo.Products_Staging));
     -- IF @cntSrc <> @cntTgt
-    --   THROW 51000, 'Row count mismatch after MERGE.', 1;
+    --   THROW 51000, 'Row count mismatch after DELETE/INSERT.', 1;
 
-    -- 3) Clean up staging
-    TRUNCATE TABLE dbo.Products_Staging;
+    -- 4) Clean up staging by deleting its rows
+    DELETE FROM dbo.Products_Staging;
 
   COMMIT TRAN;
 END
