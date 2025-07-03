@@ -1,0 +1,363 @@
+{
+    "name": "pl_copy_fault_tolerance_pattern_3",
+    "properties": {
+        "activities": [
+            {
+                "name": "LookupProductIds",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": "SELECT PRODUCT_ID FROM dbo.Products",
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "ds_product_tier1",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "CollectProductIds",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "LookupProductIds",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('LookupProductIds').output.value",
+                        "type": "Expression"
+                    },
+                    "activities": [
+                        {
+                            "name": "AppendProductId",
+                            "type": "AppendVariable",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "productIds",
+                                "value": {
+                                    "value": "@item().PRODUCT_ID",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "CopyToTier2",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "CollectProductIds",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [
+                    {
+                        "name": "Source",
+                        "value": "dbo.Products"
+                    },
+                    {
+                        "name": "Destination",
+                        "value": "dbo.Products"
+                    }
+                ],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "@concat('SELECT * FROM dbo.Products WHERE PRODUCT_ID IN (', join(variables('productIds'), ','), ')')",
+                            "type": "Expression"
+                        },
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "sink": {
+                        "type": "AzureSqlSink",
+                        "writeBatchSize": 5,
+                        "writeBehavior": "insert",
+                        "sqlWriterUseTableLock": false,
+                        "tableOption": "autoCreate",
+                        "disableMetricsCollection": false
+                    },
+                    "enableStaging": false,
+                    "enableSkipIncompatibleRow": true,
+                    "logSettings": {
+                        "enableCopyActivityLog": true,
+                        "copyActivityLogSettings": {
+                            "logLevel": "Warning",
+                            "enableReliableLogging": false
+                        },
+                        "logLocationSettings": {
+                            "linkedServiceName": {
+                                "referenceName": "la_st_orders",
+                                "type": "LinkedServiceReference"
+                            },
+                            "path": {
+                                "value": "@concat('adf-logs/', 'pipline-',pipeline().RunId)",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "mappings": [
+                            {
+                                "source": {
+                                    "name": "PRODUCT_ID",
+                                    "type": "Int32",
+                                    "physicalType": "int"
+                                },
+                                "sink": {
+                                    "name": "PRODUCT_ID",
+                                    "type": "Int32",
+                                    "physicalType": "int"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "PRODUCT_NAME",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                },
+                                "sink": {
+                                    "name": "PRODUCT_NAME",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "UNIT_PRICE",
+                                    "type": "Decimal",
+                                    "physicalType": "decimal",
+                                    "scale": 2,
+                                    "precision": 10
+                                },
+                                "sink": {
+                                    "name": "UNIT_PRICE",
+                                    "type": "Decimal",
+                                    "physicalType": "decimal",
+                                    "scale": 2,
+                                    "precision": 10
+                                }
+                            }
+                        ],
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": false,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "ds_product_tier1",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "ds_product_tier2",
+                        "type": "DatasetReference"
+                    }
+                ]
+            },
+            {
+                "name": "LookupSkippedRows",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "CopyToTier2",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "DelimitedTextSource",
+                        "storeSettings": {
+                            "type": "AzureBlobStorageReadSettings",
+                            "recursive": true,
+                            "wildcardFolderPath": "@activity('CopyToTier2').output.logFilePath",
+                            "wildcardFileName": "*txt",
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextReadSettings"
+                        }
+                    },
+                    "dataset": {
+                        "referenceName": "ds_adf_logs",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "CollectSkippedIds",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "FilterSkippedRowsFilter",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('FilterSkippedRowsFilter').output.value",
+                        "type": "Expression"
+                    },
+                    "activities": [
+                        {
+                            "name": "AppendSkippedId",
+                            "type": "AppendVariable",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "skippedIds",
+                                "value": {
+                                    "value": "@substring(\n  item().OperationItem,\n  1,\n  sub(\n    indexOf(item().OperationItem, ','),\n    1\n  )\n)",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "FilterCopiedIds",
+                "type": "Filter",
+                "dependsOn": [
+                    {
+                        "activity": "CollectSkippedIds",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@variables('productIds')",
+                        "type": "Expression"
+                    },
+                    "condition": {
+                        "value": "@not(contains(variables('skippedIds'), string(item())))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "DeleteCopiedProducts",
+                "type": "Script",
+                "dependsOn": [
+                    {
+                        "activity": "FilterCopiedIds",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 1,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "linkedServiceName": {
+                    "referenceName": "ls_sqldb_order_tier1",
+                    "type": "LinkedServiceReference"
+                },
+                "typeProperties": {
+                    "scripts": [
+                        {
+                            "type": "Query",
+                            "text": {
+                                "value": "@concat('DELETE FROM dbo.Products WHERE PRODUCT_ID IN (', join(activity('FilterCopiedIds').output.value, ','), ')')",
+                                "type": "Expression"
+                            }
+                        }
+                    ],
+                    "scriptBlockExecutionTimeout": "02:00:00"
+                }
+            },
+            {
+                "name": "FilterSkippedRowsFilter",
+                "type": "Filter",
+                "dependsOn": [
+                    {
+                        "activity": "LookupSkippedRows",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('LookupSkippedRows').output.value",
+                        "type": "Expression"
+                    },
+                    "condition": {
+                        "value": "@equals(item().OperationName, 'TabularRowSkip')",
+                        "type": "Expression"
+                    }
+                }
+            }
+        ],
+        "variables": {
+            "productIds": {
+                "type": "Array"
+            },
+            "skippedIds": {
+                "type": "Array"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2025-07-02T16:14:16Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
