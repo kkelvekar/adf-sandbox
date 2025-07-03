@@ -73,14 +73,14 @@ INSERT INTO dbo.Products (PRODUCT_ID, PRODUCT_NAME, UNIT_PRICE) VALUES
  ( 18, 'Teatime Chocolate Biscuits',            9.20),
  ( 19, 'Sir Rodney''s Marmalade',             81.00),
  ( 20, 'Sir Rodney''s Scones',                10.00),
- ( 21, 'Gustaf''s Kn‰ckebrˆd',                21.00),
- ( 22, 'Tunnbrˆd',                              9.00),
- ( 23, 'Guaran· Fant·stica',                   4.50),
- ( 24, 'NuNuCa Nuﬂ-Nougat-Creme',              14.00),
- ( 25, 'Gumb‰r Gummib‰rchen',                  31.23),
+ ( 21, 'Gustaf''s Kn√§ckebr√∂d',                21.00),
+ ( 22, 'Tunnbr√∂d',                              9.00),
+ ( 23, 'Guaran√° Fant√°stica',                   4.50),
+ ( 24, 'NuNuCa Nu√ü-Nougat-Creme',              14.00),
+ ( 25, 'Gumb√§r Gummib√§rchen',                  31.23),
  ( 26, 'Schoggi Schokolade',                  43.90),
- ( 27, 'Rˆssle Sauerkraut',                   45.60),
- ( 28, 'Th¸ringer Rostbratwurst',              123.79),
+ ( 27, 'R√∂ssle Sauerkraut',                   45.60),
+ ( 28, 'Th√ºringer Rostbratwurst',              123.79),
  ( 29, 'Nord-Ost Matjeshering',                25.89),
  ( 30, 'Gorgonzola Telino',                    12.50),
  ( 31, 'Mascarpone Fabioli',                   32.00),
@@ -89,13 +89,13 @@ INSERT INTO dbo.Products (PRODUCT_ID, PRODUCT_NAME, UNIT_PRICE) VALUES
  ( 34, 'Manjimup Dried Apples',               53.00),
  ( 35, 'Filo Mix',                              7.00),
  ( 36, 'Perth Pasties',                       32.80),
- ( 37, 'TourtiËre',                            7.45),
- ( 38, 'P‚tÈ chinois',                        24.00),
+ ( 37, 'Tourti√®re',                            7.45),
+ ( 38, 'P√¢t√© chinois',                        24.00),
  ( 39, 'Gnocchi di nonna Alice',              38.00),
  ( 40, 'Ravioli Angelo',                      19.50),
  ( 41, 'Escargots de Bourgogne',              13.25),
  ( 42, 'Vegie-spread',                        43.90),
- ( 43, 'Wimmers gute Semmelknˆdel',            9.50),
+ ( 43, 'Wimmers gute Semmelkn√∂del',            9.50),
  ( 44, 'Louisiana Fiery Hot Pepper Sauce',     21.05),
  ( 45, 'Louisiana Hot Spiced Okra',            17.00),
  ( 46, 'Laughing Lumberjack Lager',            14.00),
@@ -103,6 +103,22 @@ INSERT INTO dbo.Products (PRODUCT_ID, PRODUCT_NAME, UNIT_PRICE) VALUES
  ( 48, 'Gudbrandsdalsost',                    36.00),
  ( 49, 'Outback Lager',                        15.00),
  ( 50, 'Flotemysost',                         21.50);
+
+INSERT INTO dbo.Products (PRODUCT_ID, PRODUCT_NAME, UNIT_PRICE)
+VALUES ( 51,
+         REPLICATE('X', 200),  -- 201 characters
+         9.99 );
+
+         INSERT INTO dbo.Products (PRODUCT_ID, PRODUCT_NAME, UNIT_PRICE)
+VALUES ( 52,
+         'Job',  -- 201 characters
+         9.99 );
+
+         INSERT INTO dbo.Products (PRODUCT_ID, PRODUCT_NAME, UNIT_PRICE)
+VALUES ( 53,
+        'Bob',  -- 201 characters
+         9.99 );
+
 GO
 
 
